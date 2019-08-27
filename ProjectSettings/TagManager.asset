@@ -3,7 +3,8 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - Food
   layers:
   - Default
   - TransparentFX
@@ -13,10 +14,10 @@ TagManager:
   - UI
   - 
   - 
-  - 
-  - 
-  - 
-  - 
+  - Snake
+  - Food
+  - Walls
+  - SnakeHead
   - 
   - 
   - 
@@ -40,4 +41,16 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: Walls
+    uniqueID: 2236404419
+    locked: 0
+  - name: Food
+    uniqueID: 1391563643
+    locked: 0
+  - name: Snake
+    uniqueID: 1004587209
+    locked: 0
+  - name: SnakeHead
+    uniqueID: 2977663035
     locked: 0

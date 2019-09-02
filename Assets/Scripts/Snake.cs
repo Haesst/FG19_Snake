@@ -1,143 +1,175 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
-using UnityEngine.Tilemaps;
 
 [RequireComponent(typeof(PlayerInput))]
-public class Snake : MonoBehaviour
+public class Snake : MonoBehaviour, IObjectPlacer
 {
     [SerializeField] GameObject snakeHead = null;
     [SerializeField] GameObject snakeBody = null;
     [SerializeField] LayerMask snakeCollisions;
 
     [SerializeField] string foodTag = "Food";
+    [SerializeField] bool AI = false;
 
-
-    GameController gameController;
-    PlayerInput playerInput;
+    private PlayerInput playerInput;
     private LinkedList<GameObject> snakeBodyParts = new LinkedList<GameObject>();
-    private Vector2 headPosition;
+    private Pathfinding pathfinding;
 
-    private float timer;
     private float currentTickTime;
     private int growAmount;
+    private int lastTick;
+
+    private List<GridNode> path = new List<GridNode>();
 
     public int GrowAmount { get => growAmount; set => growAmount = value; }
-
-    // Todo: Move gameRunning to GameController
-    private bool gameRunning = true;
 
     #region Unity Functions
     private void Awake()
     {
         playerInput = GetComponent<PlayerInput>();
-        gameController = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameController>();
+        pathfinding = GetComponentInChildren<Pathfinding>();
 
         Assert.IsNotNull(playerInput, "PlayerInput component could not be found.");
-        Assert.IsNotNull(gameController, "GameController could not be found.");
-        snakeBodyParts.AddFirst(snakeHead);
+        Assert.IsNotNull(pathfinding, "Pathfinding component could not  be found.");
 
-        timer = gameController.StartingTimer;
-        currentTickTime = gameController.StartingTimer;
-        growAmount = gameController.StartSize;
+        snakeBodyParts.AddFirst(snakeHead);
+        growAmount = GameController.Instance.StartSize;
+        pathfinding.Seeker = snakeHead.transform;
+        // Resource loading
+        // Resources.Load<GameObject>("Resources/Prefabs/Snake")
     }
 
     private void Update()
     {
-        if(timer <= 0 && gameRunning)
+        UpdateGrid();
+        CheckForTarget();
+        //CheckForFood();
+        if (AI && path == null || path?.Count <= 0)
+        {
+            path = pathfinding.Path;
+        }
+        CommandInvoker.SetNextMoveAction(new MoveTransformCommand(snakeHead.transform, GetNewHeadPosition(), Quaternion.Euler(0, 0, GetRotation(playerInput.Direction))));
+        
+        
+        if (CommandInvoker.CurrentTick > lastTick)
         {
             if (growAmount > 0)
             {
-                AddSnakeBody();
-                UpdateHeadPosition();
-                CheckForCollision();
+                lastTick = CommandInvoker.AddTickAction(new InstantiateObjectCommand(snakeBody, snakeHead.transform.position, Quaternion.identity, transform, this));
+                growAmount--;
             }
             else
             {
-                UpdateBodyPosition();
-                UpdateHeadPosition();
-                CheckForCollision();
+                if (snakeBodyParts.Count > 1)
+                {
+                    GameObject lastPart = snakeBodyParts.Last.Value;
+                    snakeBodyParts.RemoveLast();
+                    snakeBodyParts.AddAfter(snakeBodyParts.First, lastPart);
+                    lastTick = CommandInvoker.AddTickAction(new MoveTransformCommand(lastPart.transform, snakeHead.transform.position));
+                }
             }
-            headPosition = snakeHead.transform.position;
-            timer = currentTickTime;
+            playerInput.LastDirection = playerInput.Direction;
         }
-        else
-        {
-            timer -= Time.deltaTime;
-        }
-    }
-    private void OnTriggerEnter2D(Collider2D collision)
-    {
-        if(collision.tag == foodTag)
-        {
-            Food food = (Food)collision.gameObject.GetComponent<Food>();
-            gameController.AddScore(food.Points);
-            growAmount += food.GrowthAmount;
-            food.Eat();
-        }
-        //else if(collision.name == "Apple")
-        //{
-        //    Destroy(collision.gameObject);
-        //    gameController.EatApple();
-        //    growAmount++;
-        //    if(timer - gameController.AppleTimeRemoval <= gameController.LowestTimer)
-        //    {
-        //        currentTickTime = gameController.LowestTimer;
-        //    }
-        //    else
-        //    {
-        //        currentTickTime -= gameController.AppleTimeRemoval;
-        //    }
-        //}
     }
     #endregion Unity Functions
-    private void UpdateHeadPosition()
+
+    private int GetRotation(int direction)
     {
-        Vector3 newPos;
-        int rotation;
-        if (playerInput.Direction == PlayerInput.NORTH)
+        return direction == PlayerInput.NORTH
+            ? 0
+            : direction == PlayerInput.EAST
+            ? -90
+            : direction == PlayerInput.SOUTH
+            ? 180
+            : 90;
+    }
+
+    private void CheckForFood()
+    {
+        RaycastHit2D[] raycast = Physics2D.RaycastAll(snakeHead.transform.position, Vector2.zero);
+        /*
+        if (raycast.collider != null)
         {
-            newPos = new Vector3(snakeHead.transform.position.x, snakeHead.transform.position.y + 1, snakeHead.transform.position.z);
-            rotation = 0;
+            if(raycast.collider.tag == foodTag)
+            {
+                Food food = (Food)raycast.collider.GetComponent<Food>();
+                Assert.IsNotNull(food, "GameObject tagged Food without food component");
+                gameController.AddScore(food.Points);
+                growAmount += food.GrowthAmount;
+                food.Eat();
+            }
         }
-        else if (playerInput.Direction == PlayerInput.EAST)
+        */
+        for(int i = 0; i < raycast.Length; i++)
         {
-            newPos = new Vector3(snakeHead.transform.position.x + 1, snakeHead.transform.position.y, snakeHead.transform.position.z);
-            rotation = -90;
+            if(raycast[i].collider != null && raycast[i].collider.tag == foodTag)
+            {
+                Food food = (Food)raycast[i].collider.GetComponent<Food>();
+                Assert.IsNotNull(food, "GameObject tagged Food without food component");
+                GameController.Instance.AddScore(food.Points);
+                growAmount += food.GrowthAmount;
+                food.Eat(transform);
+            }
         }
-        else if (playerInput.Direction == PlayerInput.SOUTH)
+    }
+
+    public void PlaceObjectCallback(GameObject gameObject)
+    {
+        snakeBodyParts.AddAfter(snakeBodyParts.First, gameObject);
+    }
+    private Vector3 GetNewHeadPosition()
+    {
+        if (AI)
         {
-            newPos = new Vector3(snakeHead.transform.position.x, snakeHead.transform.position.y - 1, snakeHead.transform.position.z);
-            rotation = 180;
+            if (path != null && path.Count > 0)
+            {
+                if (path[0].WorldPosition.x != snakeHead.transform.position.x)
+                {
+                    if (path[0].WorldPosition.x > snakeHead.transform.position.x)
+                    {
+                        path.RemoveAt(0);
+                        playerInput.Direction = PlayerInput.EAST;
+                        return new Vector3(snakeHead.transform.position.x + 1, snakeHead.transform.position.y, transform.position.z);
+                    }
+                    else
+                    {
+                        path.RemoveAt(0);
+                        playerInput.Direction = PlayerInput.WEST;
+                        return new Vector3(snakeHead.transform.position.x - 1, snakeHead.transform.position.y, transform.position.z);
+                    }
+                }
+                else
+                {
+                    if (path[0].WorldPosition.y > snakeHead.transform.position.y)
+                    {
+                        path.RemoveAt(0);
+                        playerInput.Direction = PlayerInput.NORTH;
+                        return new Vector3(snakeHead.transform.position.x, snakeHead.transform.position.y + 1, transform.position.z);
+                    }
+                    else
+                    {
+                        path.RemoveAt(0);
+                        playerInput.Direction = PlayerInput.SOUTH;
+                        return new Vector3(snakeHead.transform.position.x, snakeHead.transform.position.y - 1, transform.position.z);
+                    }
+                }
+            }
+            else
+            {
+                return new Vector3(snakeHead.transform.position.x, snakeHead.transform.position.y, transform.position.z);
+            }
         }
         else
         {
-            newPos = new Vector3(snakeHead.transform.position.x - 1, snakeHead.transform.position.y, snakeHead.transform.position.z);
-            rotation = 90;
+            return playerInput.Direction == PlayerInput.NORTH
+                ? new Vector3(snakeHead.transform.position.x, snakeHead.transform.position.y + 1, snakeHead.transform.position.z)
+                : playerInput.Direction == PlayerInput.EAST
+                ? new Vector3(snakeHead.transform.position.x + 1, snakeHead.transform.position.y, snakeHead.transform.position.z)
+                : playerInput.Direction == PlayerInput.SOUTH
+                ? new Vector3(snakeHead.transform.position.x, snakeHead.transform.position.y - 1, snakeHead.transform.position.z)
+                : new Vector3(snakeHead.transform.position.x - 1, snakeHead.transform.position.y, snakeHead.transform.position.z);
         }
-
-        snakeHead.transform.position = newPos;
-        snakeHead.transform.rotation = Quaternion.Euler(0, 0, rotation);
-    }
-
-    private void UpdateBodyPosition()
-    {
-        if(snakeBodyParts.Count > 1)
-        {
-            GameObject lastPart = snakeBodyParts.Last.Value;
-            snakeBodyParts.RemoveLast();
-
-            lastPart.transform.position = headPosition;
-            snakeBodyParts.AddAfter(snakeBodyParts.First, lastPart);
-        }
-    }
-
-    private void AddSnakeBody()
-    {
-        GameObject gameObject = Instantiate(snakeBody, transform);
-        gameObject.transform.position = headPosition;
-        snakeBodyParts.AddAfter(snakeBodyParts.First, gameObject);
-        growAmount--;
     }
 
     private void CheckForCollision()
@@ -146,19 +178,66 @@ public class Snake : MonoBehaviour
 
         if (raycast.collider != null)
         {
-            //// The raycast hit's the tail before it has time to move. Make sure the distance is over 0.5 if the hitpoint is a snakepart
+            //// The raycast hits the tail before it has time to move. Make sure the distance is over 0.5 if the hitpoint is a snakepart
             if (!CheckForSnakeCollision(raycast.collider.transform) || 
                 (CheckForSnakeCollision(raycast.collider.transform) && 
                 Vector3.Distance(raycast.collider.transform.position, snakeHead.transform.position) < 0.5))
             {
-                gameRunning = false;
+                GameController.Instance.GameEnd();
                 raycast.collider.name = "Hitpoint.";
             }
         }
     }
 
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        Debug.Log("Collision");
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.tag == foodTag)
+        {
+            Food food = collision.gameObject.GetComponent<Food>();
+            Assert.IsNotNull(food, "Food without food component!");
+            food.Eat(transform);
+        }
+    }
+
+    private bool CheckForCollisionAt(Vector2 position)
+    {
+        Debug.Log(position);
+        RaycastHit2D[] hits = Physics2D.RaycastAll(position, Vector2.zero, snakeCollisions);
+
+        for(int i = 0; i < hits.Length; i++)
+        {
+            if(hits[i].collider != null && hits[i].collider.tag != foodTag)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private bool CheckForSnakeCollision(Transform transform)
     {
         return transform.parent == this.transform;
+    }
+
+    private void CheckForTarget()
+    {
+        if(pathfinding.Target == null)
+        {
+            GameObject target = GameObject.FindGameObjectWithTag(foodTag);
+            if(target != null)
+            {
+                pathfinding.Target = target.transform;
+            }
+        }
+    }
+
+    private void UpdateGrid()
+    {
+        pathfinding?.UpdateGrid();
     }
 }

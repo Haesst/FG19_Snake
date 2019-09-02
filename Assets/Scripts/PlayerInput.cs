@@ -8,29 +8,32 @@ public class PlayerInput : MonoBehaviour
     public const int WEST = 3;
 
     private int direction;
-    public int Direction { get => direction; }
-    private float baseMoveSpeed = 0.6f;
-    public float BaseMoveSpeed { get => baseMoveSpeed; }
-    public float timer;
+    private int desiredDirection;
+    private int lastDirection;
+
+    public int Direction { get => direction; set => direction = value; }
+    public int DesiredDirection { get => desiredDirection; set => desiredDirection = value; }
+    public int LastDirection { get => lastDirection; set => lastDirection = value; }
 
     private void Awake()
     {
         direction = Random.Range(0, 4);
     }
-    private void Update()
+
+    private void GetPlayerInput()
     {
-        PlayerMovement();
+        if (Input.GetAxisRaw("Vertical") > 0 && lastDirection != SOUTH)
+            direction = NORTH;
+        else if (Input.GetAxisRaw("Vertical") < 0 && lastDirection != NORTH)
+            direction = SOUTH;
+        else if (Input.GetAxisRaw("Horizontal") > 0 && lastDirection != WEST)
+            direction = EAST;
+        else if (Input.GetAxisRaw("Horizontal") < 0 && lastDirection != EAST)
+            direction = WEST;
     }
 
-    private void PlayerMovement()
+    private void Update()
     {
-        if (Input.GetAxisRaw("Vertical") > 0 && direction != SOUTH)
-            direction = NORTH;
-        else if (Input.GetAxisRaw("Vertical") < 0 && direction != NORTH)
-            direction = SOUTH;
-        else if (Input.GetAxisRaw("Horizontal") > 0 && direction != WEST)
-            direction = EAST;
-        else if (Input.GetAxisRaw("Horizontal") < 0 && direction != EAST)
-            direction = WEST;
+        GetPlayerInput();
     }
 }

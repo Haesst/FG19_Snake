@@ -3,26 +3,20 @@ using UnityEngine.Assertions;
 
 public class Food : MonoBehaviour
 {
-    [SerializeField] int points = 10;
-    [SerializeField] int growthAmount = 1;
-    [SerializeField] string gameControllerTag = "GameController";
-
-    protected static GameController gameController;
+    [SerializeField] protected int points = 10;
+    [SerializeField] protected int growthAmount = 1;
+    [SerializeField] protected float timeRemoval = 0f;
 
     public int Points { get => points; }
     public int GrowthAmount { get => growthAmount; }
 
-    private void Awake()
+    public virtual void Eat(Transform eater)
     {
-        if (gameController == null)
-        {
-            gameController = GameObject.FindGameObjectWithTag(gameControllerTag).GetComponent<GameController>();
-        }
-        Assert.IsNotNull(gameController, "Could not find GameController");
-    }
-
-    public virtual void Eat()
-    {
+        Snake snake = eater.GetComponent<Snake>();
+        Assert.IsNotNull(snake, "Snake without snake component");
+        snake.GrowAmount += growthAmount;
+        GameController.Instance.AddScore(points);
+        GameController.Instance.TimeRemoval += timeRemoval;
         Destroy(gameObject);
     }
 }

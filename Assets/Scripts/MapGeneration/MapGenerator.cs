@@ -1,62 +1,75 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 public class MapGenerator : MonoBehaviour
 {
-    [SerializeField]
     private int width;
-    [SerializeField]
     private int height;
-    [SerializeField]
-    [Range(0, 80)]
-    private int fillPercentage;
-    [SerializeField]
-    private int smoothnessFactor;
-    [SerializeField]
-    private int wallThresholdAmount;
-    [SerializeField]
-    private int roomThresholdAmount;
-    [SerializeField]
-    private int passageWayRadius;
-    [SerializeField]
-    private string seed;
+    [Header("Generation")]
+    [SerializeField][Range(0, 80)] private int fillPercentage;
+    [SerializeField] private int smoothnessFactor;
+    [SerializeField] private int wallThresholdAmount;
+    [SerializeField] private int roomThresholdAmount;
+    [SerializeField] private int passageWayRadius;
+
+    [Header("Tiles and tilemaps")]
+    [SerializeField] private Tilemap wallMap;
+    [SerializeField] private Tilemap groundMap;
+    [SerializeField] private Tile wallTile;
+    [SerializeField] private Tile groundTile;
 
     int[,] map;
-    System.Random random;
-    bool randomSeed;
+
+    private static MapGenerator instance;
+
+    public static MapGenerator Instance { get => instance; }
+    public bool Loaded { get; private set; }
 
     private void Awake()
     {
-        if(seed == null || seed == "")
+        if(instance != null && instance != this)
         {
-            randomSeed = true;
+            Destroy(this.gameObject);
         }
-
-        GenerateMap();
-    }
-
-    private void Update()
-    {
-        if (Input.GetMouseButtonDown(0))
+        else
         {
-            GenerateMap();
+            instance = this;
         }
     }
 
-    private void GenerateMap()
+    public Vector3Int GetEmptyPosition()
     {
-        if (randomSeed)
-        {
-            seed = Time.time.ToString();
-        }
+        int x = GameController.GetRandom.Next(width);
+        int y = GameController.GetRandom.Next(height);
 
-        random = new System.Random(seed.GetHashCode());
+        if (IsInMapRange(x,y) && map[x,y] == 0)
+        {
+            Vector3 position = CoordToWorldPoint(new Coord(x, y));
+
+            return new Vector3Int((int)position.x, (int)position.y, 0);
+        }
+        else
+        {
+            return GetEmptyPosition();
+        }
+    }
+
+    public ref int[,] GenerateMap(int width, int height)
+    {
+        this.width = width;
+        this.height = height;
         map = new int[width, height];
+
         FillMap();
         SmoothMap();
         FillHoles();
         ProcessMap();
+        DrawMap();
+
+        Loaded = true;
+        return ref map;
     }
 
     private void FillMap()
@@ -74,7 +87,7 @@ public class MapGenerator : MonoBehaviour
                     }
                     else
                     {
-                        map[x, y] = random.Next(101) < fillPercentage ? 1 : 0;
+                        map[x, y] = GameController.GetRandom.Next(101) < fillPercentage ? 1 : 0;
                     }
                 }
             }
@@ -440,17 +453,36 @@ public class MapGenerator : MonoBehaviour
         return x >= 0 && x < width && y >= 0 && y < height;
     }
 
-    private void OnDrawGizmos()
+    public void DrawMap(int[,] theMap = null)
     {
+        wallMap.ClearAllTiles();
+        groundMap.ClearAllTiles();
+        Debug.Log("Drawing map");
+        if(theMap == null)
+        {
+            theMap = map;
+        }
+
         if(map != null)
         {
             for(int x = 0; x < width; x++)
             {
                 for(int y = 0; y < height; y++)
                 {
-                    Gizmos.color = map[x, y] == 1 ? Color.black : Color.white;
-                    Vector3 position = new Vector3(-width / 2 + 0.5f + x, -height / 2 + 0.5f + y, 0);
-                    Gizmos.DrawCube(position, Vector3.one);
+                    if(theMap[x,y] == 0)
+                    {
+                        Vector3 pos = CoordToWorldPoint(new Coord(x, y));
+                        //Vector3Int intPos = new Vector3Int((int)pos.x, (int)pos.y, (int)pos.z);
+                        Vector3Int intPos = new Vector3Int(x, y, 0);
+                        groundMap.SetTile(intPos, groundTile);
+                    }
+                    else if(theMap[x,y] == 1)
+                    {
+                        Vector3 pos = CoordToWorldPoint(new Coord(x, y));
+                        //Vector3Int intPos = new Vector3Int((int)pos.x, (int)pos.y, (int)pos.z);
+                        Vector3Int intPos = new Vector3Int(x, y, 0);
+                        wallMap.SetTile(intPos, wallTile);
+                    }
                 }
             }
         }

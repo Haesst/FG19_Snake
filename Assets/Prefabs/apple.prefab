@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 4939164582987006982}
   - component: {fileID: 6599981622568628571}
   - component: {fileID: -6264718324933923501}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: apple
   m_TagString: Food
   m_Icon: {fileID: 0}
@@ -120,3 +120,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 453f26c2bd6ef784caca3690a45935a2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  score: 10
+  growAmount: 1
+  timeRemoval: 0.01

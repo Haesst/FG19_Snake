@@ -7015,7 +7015,7 @@ GameObject:
   - component: {fileID: 1479441243}
   - component: {fileID: 1479441242}
   - component: {fileID: 1479441241}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Wallmap
   m_TagString: Wall
   m_Icon: {fileID: 0}
@@ -8284,9 +8284,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   player: {fileID: 1533593677924652985, guid: 46f70b79f4798ca419298b5cf5ad19ce, type: 3}
   apple: {fileID: 3872902919611556473, guid: 34cf301a7101fdb458f94bff88dc3477, type: 3}
-  tickTime: 0.3
-  startGrowth: 3
-  width: 40
+  tickTime: 0.001
+  startGrowth: 60
+  width: 42
   height: 18
   mapSeed: 
   currentTick: 0

@@ -1,9 +1,9 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.Assertions;
 
 public class GameController : MonoBehaviour
 {
-    // Todo: Apples can spawn under snake :S
     // Todo: Pathfinding
     [Header("Prefabs")]
     [SerializeField] private GameObject player;
@@ -13,7 +13,7 @@ public class GameController : MonoBehaviour
     [SerializeField] private float tickTime = 0.3f;
     [SerializeField] private int startGrowth = 3;
     [Header("Map settings")]
-    [SerializeField] private int width = 40;
+    [SerializeField] private int width = 42;
     [SerializeField] private int height = 18;
     [SerializeField] private string mapSeed;
 
@@ -25,6 +25,9 @@ public class GameController : MonoBehaviour
 
     public int[,] map;
     private float tickTimer;
+    private bool gameIsRunning = true;
+
+    private List<GameObject> foodsInPlay;
 
     private static System.Random random;
 
@@ -34,6 +37,10 @@ public class GameController : MonoBehaviour
     public int StartGrowth { get => startGrowth; }
     public static System.Random GetRandom { get => random; }
     public int CurrentTick { get => currentTick; }
+    public int Width { get => width; }
+    public int Height { get => height; }
+    public GameObject GetTopFood { get => foodsInPlay[0]; }
+    public bool GameIsRunning { get => gameIsRunning; set => gameIsRunning = value; }
 
     public static GameController Instance { get; private set; }
 
@@ -54,6 +61,7 @@ public class GameController : MonoBehaviour
             mapSeed = System.DateTime.Now.ToString();
         }
 
+        foodsInPlay = new List<GameObject>();
         random = new System.Random(mapSeed.GetHashCode());
         tickTimer = tickTime;
     }
@@ -66,7 +74,7 @@ public class GameController : MonoBehaviour
 
     private void Update()
     {
-        if(tickTimer <= 0)
+        if(tickTimer <= 0 && gameIsRunning)
         {
             currentTick++;
             tickTimer = tickTime;
@@ -80,11 +88,13 @@ public class GameController : MonoBehaviour
     private void SpawnSnake()
     {
         GameObject go = GameObject.Instantiate(player);
+        go.GetComponent<Player>().AI = true;
     }
 
     private void SpawnFirstApple()
     {
         GameObject go = GameObject.Instantiate(apple, GetEmptyPosition(), Quaternion.identity);
+        foodsInPlay.Add(go);
     }
 
     public Vector2 GetEmptyPosition()
@@ -99,19 +109,22 @@ public class GameController : MonoBehaviour
             x = random.Next(1, width);
             y = random.Next(1, height);
 
-            RaycastHit2D raycastHit = Physics2D.Raycast(new Vector2(x, y), Vector2.zero);
+            x = -width / 2 + x;
+            y = -height / 2 + y;
 
-            if(raycastHit.collider == null)
+            RaycastHit2D[] raycastHits = Physics2D.BoxCastAll(new Vector2(x, y), Vector2.one * 0.5f, 0f, Vector2.zero);
+
+            if(raycastHits.Length == 0)
             {
                 positionFound = true;
             }
             else
             {
-                Debug.Log($"Tried position [{x},{y}] but couldn't return it because there's a {raycastHit.collider.name} there");
+                Debug.Log($"Tried position [{x},{y}] but couldn't return it because there's {raycastHits.Length} objects there");
             }
         }
 
-        return new Vector2((-width / 2 + 1 + x), (-height / 2) + 1 + y);
+        return new Vector2(x, y);
     }
 
     public void RemoveTime(float time)

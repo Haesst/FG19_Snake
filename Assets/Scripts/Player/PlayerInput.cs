@@ -38,4 +38,9 @@ public class PlayerInput : MonoBehaviour
             }
         }
     }
+    
+    public void SetAIMovement(int direction)
+    {
+        Direction = direction;
+    }
 }

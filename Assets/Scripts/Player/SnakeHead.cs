@@ -22,6 +22,10 @@ public class SnakeHead : MonoBehaviour
                 snake.GrowAmount += food.GrowAmount;
                 GameController.Instance.RemoveTime(food.TimeRemoval);
                 break;
+            case "Snake":
+                GameController.Instance.GameIsRunning = false;
+                Debug.Log("I ate myself :(");
+                break;
             default:
                 Debug.Log($"I hit a: {collision.tag}");
                 break;

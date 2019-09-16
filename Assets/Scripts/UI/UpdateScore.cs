@@ -7,14 +7,19 @@ public class UpdateScore : MonoBehaviour
 {
     Text scoreText = null;
 
+    /// <summary>
+    /// Make sure we have a text component on the gameobject.
+    /// </summary>
     private void Awake()
     {
         scoreText = GetComponent<Text>();
-        Assert.IsNotNull(scoreText, "Text component could not be found.");
+        Assert.IsNotNull(scoreText, "Text component could not be found!");
+        SetScoreText(0);
     }
 
     public void SetScoreText(int score)
     {
-        scoreText.text = string.Format(score.ToString().PadLeft(4, '0'));
+        // Update the score
+        scoreText.text = score.ToString().PadLeft(4, '0');
     }
 }

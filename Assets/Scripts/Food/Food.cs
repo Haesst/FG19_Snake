@@ -1,22 +1,22 @@
 ﻿using UnityEngine;
-using UnityEngine.Assertions;
 
 public class Food : MonoBehaviour
 {
-    [SerializeField] protected int points = 10;
-    [SerializeField] protected int growthAmount = 1;
-    [SerializeField] protected float timeRemoval = 0f;
+    /// <summary>
+    /// This is a base class that every food item
+    /// is created from. I wanted it to be easy to add
+    /// other food items that could be spawned like power-ups
+    /// or extra points.
+    /// </summary>
+    [SerializeField] private int score = 10;
+    [SerializeField] private int growAmount = 1;
+    [SerializeField] private float timeRemoval = 0.01f;
 
-    public int Points { get => points; }
-    public int GrowthAmount { get => growthAmount; }
+    public int GrowAmount { get => growAmount; }
+    public float TimeRemoval { get => timeRemoval; }
 
-    public virtual void Eat(Transform eater)
+    virtual public void Eat()
     {
-        Snake snake = eater.GetComponent<Snake>();
-        Assert.IsNotNull(snake, "Snake without snake component");
-        snake.GrowAmount += growthAmount;
-        GameController.Instance.AddScore(points);
-        GameController.Instance.TimeRemoval += timeRemoval;
-        Destroy(gameObject);
+        GameController.Instance.AddScore(score);
     }
 }

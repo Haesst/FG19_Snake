@@ -1,17 +1,16 @@
 ﻿using UnityEngine;
-using UnityEngine.Assertions;
 
 public class Apple : Food
 {
-    public override void Eat(Transform eater)
+    /// <summary>
+    /// An apple should always be present and instead of just despawning
+    /// and creating new ones we can change the position of the apple
+    /// that's in play. Then call base.Eat() to add the points and remove
+    /// time and so on.
+    /// </summary>
+    public override void Eat()
     {
-        Snake snake = eater.GetComponent<Snake>();
-        Assert.IsNotNull(snake, "Snake without snake component");
-        snake.GrowAmount += growthAmount;
-        GameController.Instance.AddScore(points);
-        GameController.Instance.TimeRemoval += timeRemoval;
-
-        Vector3 newPosition = GameController.Instance.GetRandomEmptyPosition();
-        transform.position = newPosition;
+        transform.position = GameController.Instance.GetEmptyPosition();
+        base.Eat();
     }
 }

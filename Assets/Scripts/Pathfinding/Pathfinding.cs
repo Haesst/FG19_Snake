@@ -129,13 +129,16 @@ public class Pathfinding : MonoBehaviour
                 // we want to update the tile with this node as the parent
                 // and add it to the list if it's not in there
 
-                neighbour.GCost = newCostToNeighbour;
-                neighbour.HCost = GetManhattanDistance(neighbour, targetNode);
-                neighbour.Parent = node;
-
-                if (!openList.Contains(neighbour))
+                if (newCostToNeighbour < neighbour.GCost || !openList.Contains(neighbour))
                 {
-                    openList.Add(neighbour);
+                    neighbour.GCost = newCostToNeighbour;
+                    neighbour.HCost = GetManhattanDistance(neighbour, targetNode);
+                    neighbour.Parent = node;
+
+                    if (!openList.Contains(neighbour))
+                    {
+                        openList.Add(neighbour);
+                    }
                 }
             }
         }
